@@ -13,6 +13,7 @@ import type { UserAuthParams } from './auth';
 import type { DownloadFileParams, DownloadFileWithDcParams, DownloadMediaParams } from './downloadFile';
 import type { UploadFileParams } from './uploadFile';
 
+import { IS_CUSTOM_DC } from '../../../config';
 import Deferred from '../../../util/Deferred';
 import { concat } from '../../../util/encoding/buffer';
 import { toJSNumber } from '../../../util/numbers';
@@ -364,9 +365,11 @@ class TelegramClient {
 
     if (!this.session.serverAddress || (this.session.serverAddress.includes(':') !== this._useIPV6)) {
       const DC = getDC(this.defaultDcId);
+      // A custom backend listens on its own port; Telegram's DCs are on 443/80.
+      const port = IS_CUSTOM_DC ? DC.port : (this._args.useWSS ? 443 : 80);
       // TODO Fill IP addresses for when `this._useIPV6` is used
       this.session.setDC(
-        this.defaultDcId, DC.ipAddress, this._args.useWSS ? 443 : 80, this._args.isTestServerRequested,
+        this.defaultDcId, DC.ipAddress, port, this._args.isTestServerRequested,
       );
     }
   }

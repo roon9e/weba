@@ -1,4 +1,4 @@
-import { concat } from '../../../util/encoding/buffer';
+import { bufferFromHex, concat } from '../../../util/encoding/buffer';
 
 import {
   generateRandomBytes,
@@ -37,6 +37,86 @@ export const SERVER_KEYS = [
   acc.set(fingerprint, keyInfo);
   return acc;
 }, new Map<bigint, { n: bigint; e: number }>());
+
+/**
+ * TL `bytes`: a length header, then the bytes, then zero padding up to the next
+ * multiple of 4 measured from the start of the buffer rather than from the
+ * start of this field — so a trailing 3-byte field adds no padding at all when
+ * the running length is already aligned. gotd's `bin.Buffer.PutBytes` and
+ * webogram's `BinaryWriter.storeBytes` both do this, and the fingerprint below
+ * depends on it: padding each field on its own changes the hash.
+ */
+function encodeTLPaddingLength(length: number) {
+  return (4 - (length % 4)) % 4;
+}
+
+function encodeTLBytes(parts: Uint8Array[]) {
+  let total = 0;
+  const chunks: Uint8Array[] = [];
+
+  for (const part of parts) {
+    const len = part.length;
+    if (len <= 253) {
+      chunks.push(new Uint8Array([len]));
+      total += 1;
+    } else {
+      chunks.push(new Uint8Array([254, len & 0xFF, (len & 0xFF00) >> 8, (len & 0xFF0000) >> 16]));
+      total += 4;
+    }
+    chunks.push(part);
+    total += len;
+    total += encodeTLPaddingLength(total);
+  }
+
+  return concat(...chunks);
+}
+
+/**
+ * The MTProto public key fingerprint, which is what a server advertises in
+ * `req_pq_multi` and what the client echoes back in `req_DH_params`: sha1 over
+ * the TL serialization of the `publicKey` body, bytes [12:20], read as a
+ * little-endian signed 64-bit integer.
+ */
+async function computeFingerprint(n: Uint8Array, e: Uint8Array) {
+  const digest = await sha1(encodeTLBytes([n, e]));
+  // The last 8 bytes, little-endian — a DataView over the slice rather than a
+  // reversed copy, and BigInt.asIntN for the sign.
+  const view = new DataView(digest.buffer, digest.byteOffset + 12, 8);
+  return BigInt.asIntN(64, view.getBigUint64(0, true));
+}
+
+let customKeyPromise: Promise<void> | undefined;
+
+/**
+ * Registers the backend's own RSA key, given as a hex modulus, alongside
+ * Telegram's. Without this the DH handshake finds no key for the fingerprint
+ * the backend advertises and throws "could not find a valid key".
+ *
+ * Idempotent and awaited once per session, before the fingerprint lookup: the
+ * digest is WebCrypto, so it cannot be computed while `SERVER_KEYS` is built.
+ */
+export function registerCustomKey(modulusHex: string, exponent = 65537) {
+  customKeyPromise ||= (async () => {
+    if (!modulusHex) return;
+
+    const modulus = BigInt(`0x${modulusHex}`);
+    // `big.Int.Bytes()` in gotd, and the TL encoding, use the minimal
+    // big-endian form: a leading zero byte would change both the bytes and the
+    // length header that goes in front of them.
+    let hex = modulus.toString(16);
+    if (hex.length % 2) hex = `0${hex}`;
+    let eHex = exponent.toString(16);
+    if (eHex.length % 2) eHex = `0${eHex}`;
+
+    const n = bufferFromHex(hex);
+    const e = bufferFromHex(eHex);
+    const fingerprint = await computeFingerprint(n, e);
+
+    SERVER_KEYS.set(fingerprint, { n: modulus, e: exponent });
+  })();
+
+  return customKeyPromise;
+}
 
 /**
  * Encrypts the given data known the fingerprint to be used

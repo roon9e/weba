@@ -1,5 +1,6 @@
 import { Mutex } from 'async-mutex';
 
+import { IS_CUSTOM_DC } from '../../../config';
 import { concat } from '../../../util/encoding/buffer';
 
 const closeError = new Error('WebSocket was closed');
@@ -79,10 +80,20 @@ export default class PromisedWebSockets {
   }
 
   getWebSocketLink(ip: string, port: number, isTestServer?: boolean, isPremium?: boolean) {
+    const path = `/apiws${isTestServer ? '_test' : ''}${isPremium ? '_premium' : ''}`;
+
+    // A custom backend is reached through this app's own origin, which nginx
+    // proxies to it. Going straight at the backend instead would be blocked as
+    // mixed content from an HTTPS page, since the backend speaks plain ws/wss
+    // on its own port rather than TLS on 443.
+    if (IS_CUSTOM_DC && location.protocol === 'https:') {
+      return `wss://${location.host}${path}`;
+    }
+
     if (port === 443) {
-      return `wss://${ip}:${port}/apiws${isTestServer ? '_test' : ''}${isPremium ? '_premium' : ''}`;
+      return `wss://${ip}:${port}${path}`;
     } else {
-      return `ws://${ip}:${port}/apiws${isTestServer ? '_test' : ''}${isPremium ? '_premium' : ''}`;
+      return `ws://${ip}:${port}${path}`;
     }
   }
 

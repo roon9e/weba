@@ -17,6 +17,23 @@ export const SHORT_DOMAIN = import.meta.env.TG_SHORT_DOMAIN || '';
 export const APP_PROTOCOL = import.meta.env.TG_APP_PROTOCOL || '';
 export const WEBSYNC_ENABLED = import.meta.env.TG_WEBSYNC_ENABLED !== '0';
 
+// A custom MTProto server, for a fork that runs against its own backend instead
+// of Telegram's DCs. Empty by default, and `getDC` in lib/gramjs/Utils.ts then
+// hands out Telegram's `zws<n>.web.telegram.org` exactly as before.
+//
+// DC_HOST/DC_PORT name the backend; nginx is expected to proxy the transport
+// paths (`/apiws`, `/apiw1`, and their `_premium` forms) from this app's own
+// origin to it, which is what lets a page served over HTTPS reach a backend
+// that is not itself on HTTPS.
+export const DC_HOST = import.meta.env.TG_DC_HOST || '';
+export const DC_PORT = import.meta.env.TG_DC_PORT ? parseInt(import.meta.env.TG_DC_PORT, 10) : 0;
+export const BASE_DC_ID = import.meta.env.TG_BASE_DC_ID ? parseInt(import.meta.env.TG_BASE_DC_ID, 10) : 2;
+export const IS_CUSTOM_DC = Boolean(DC_HOST);
+
+// The backend's RSA public key, in hex, so the MTProto DH handshake can trust
+// it. Telegram's own keys stay registered alongside it.
+export const RSA_MODULUS = import.meta.env.TG_RSA_MODULUS || '';
+
 // Whether this build serves its own host rather than Telegram's. Gates the
 // cross-version redirects and links, which would point a branded deploy at
 // Web K/Z on Telegram's domain.

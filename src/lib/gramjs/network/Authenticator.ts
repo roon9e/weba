@@ -6,9 +6,10 @@
  */
 import type MTProtoPlainSender from './MTProtoPlainSender';
 
+import { RSA_MODULUS } from '../../../config';
 import { compareBuffersConstantTime, concat, copy } from '../../../util/encoding/buffer';
 import { IGE } from '../crypto/IGE';
-import { SERVER_KEYS } from '../crypto/RSA';
+import { registerCustomKey, SERVER_KEYS } from '../crypto/RSA';
 import { SecurityError } from '../errors';
 import { BinaryReader } from '../extensions';
 import { Api } from '../tl';
@@ -71,6 +72,9 @@ export async function doAuthentication(
   }
   let targetFingerprint;
   let targetKey;
+  // A fork's own backend advertises a fingerprint Telegram's keys do not cover,
+  // so register ours before deciding which of the offered keys we can use.
+  await registerCustomKey(RSA_MODULUS);
   for (const fingerprint of resPQ.serverPublicKeyFingerprints) {
     targetKey = SERVER_KEYS.get(fingerprint);
     if (targetKey !== undefined) {

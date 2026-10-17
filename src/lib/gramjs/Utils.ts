@@ -1,5 +1,6 @@
 import type { Entity } from './types';
 
+import { BASE_DC_ID, DC_HOST, DC_PORT, IS_CUSTOM_DC } from '../../config';
 import { bufferFromHex, concat } from '../../util/encoding/buffer';
 import { Api } from './tl';
 
@@ -180,6 +181,13 @@ export function getDisplayName(entity: Entity) {
  * @return {{port: number, ipAddress: string, id: number}}
  */
 export function getDC(dcId: number, downloadDC = false) {
+  // A fork's own backend, which serves every DC id from one endpoint. It answers
+  // the transport on its own port rather than Telegram's 443, so the client goes
+  // through nginx on this app's origin (see PromisedWebSockets.getWebSocketLink).
+  if (IS_CUSTOM_DC && dcId === BASE_DC_ID) {
+    return { id: dcId, ipAddress: DC_HOST, port: DC_PORT || 443 };
+  }
+
   // TODO Move to external config
   switch (dcId) {
     case 1:
