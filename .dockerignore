@@ -1,0 +1,15 @@
+# Keep the build context small: `public/build-stats.json` alone is ~97 MB, and
+# `node_modules` plus `.git` are several hundred more. Neither belongs in the
+# daemon, and the builder stage installs from the manifests itself.
+.git
+node_modules
+.cache
+dist
+tauri/target
+
+# The husky hooks need no git history to be installed.
+.husky
+
+*.log
+.env.local
+.env.*.local

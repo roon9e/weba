@@ -14,6 +14,13 @@ interface ImportMetaEnv {
   readonly TG_APP_MOCKED_CLIENT: string;
   readonly TG_APP_NAME?: string;
   readonly TG_APP_TITLE: string;
+  readonly TG_APP_DESCRIPTION?: string;
+  readonly TG_APP_HOST?: string;
+  readonly TG_SHORT_DOMAIN?: string;
+  readonly TG_APP_PROTOCOL?: string;
+  readonly TG_THEME_COLOR?: string;
+  readonly TG_TILE_COLOR?: string;
+  readonly TG_WEBSYNC_ENABLED?: string;
   readonly TG_PUBLIC_URL: string;
   readonly TG_TELEGRAM_API_HASH?: string;
   readonly TG_TELEGRAM_API_ID?: string;

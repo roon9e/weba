@@ -1,6 +1,6 @@
 import type { ApiAppConfig, ApiLimitType } from './api/types';
 
-import { MULTIACCOUNT_MAX_SLOTS } from './config';
+import { APP_HOST, IS_BRANDED, MULTIACCOUNT_MAX_SLOTS, SHORT_DOMAIN } from './config';
 
 export const GROUP_CALL_PARTICIPANTS_LIMIT = 100;
 export const STORY_LIST_LIMIT = 100;
@@ -162,6 +162,7 @@ export const DEFAULT_APP_CONFIG: ApiAppConfig = {
     'k.t.me',
     'z.t.me',
     'a.t.me',
+    ...(IS_BRANDED ? [APP_HOST] : []),
   ],
   webAppAllowedProtocols: [
     'http',
@@ -175,6 +176,7 @@ export const DEFAULT_APP_CONFIG: ApiAppConfig = {
     'telesco.pe',
     'fragment.com',
     'translations.telegram.org',
+    ...(SHORT_DOMAIN ? [SHORT_DOMAIN] : []),
   ],
   typingDraftTtl: 10,
   isMessagePrimaryEditedDateEnabled: false,

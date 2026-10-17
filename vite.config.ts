@@ -13,6 +13,11 @@ import packageJson from './package.json' with { type: 'json' };
 
 const DIR_NAME = dirname(fileURLToPath(import.meta.url));
 const PRODUCTION_URL = 'https://web.telegram.org/a';
+const DEFAULT_APP_HOST = 'web.telegram.org';
+// eslint-disable-next-line @stylistic/max-len
+const DEFAULT_APP_DESCRIPTION = 'Telegram is a cloud-based mobile and desktop messaging app with a focus on security and speed.';
+const DEFAULT_THEME_COLOR = '#ffffff';
+const DEFAULT_TILE_COLOR = '#2b5797';
 
 const { version: APP_VERSION } = packageJson;
 const BUNDLE_STATS_OUT_DIR = 'bundle-stats';
@@ -85,7 +90,22 @@ export default defineConfig(({ mode }): UserConfig => {
   const appleIcon = isProductionApp ? 'apple-touch-icon' : 'apple-touch-icon-dev';
   const mainIcon = isProductionApp ? 'icon-192x192' : 'icon-dev-192x192';
   const manifest = isProductionApp ? 'site.webmanifest' : 'site_dev.webmanifest';
-  const csp = buildCsp(appEnv);
+
+  // Branding. Every value falls back to Telegram's own, so an unmodified checkout
+  // builds and behaves exactly as upstream does — a fork only fills these in.
+  const appName = env.APP_NAME || '';
+  const appDescription = env.APP_DESCRIPTION || DEFAULT_APP_DESCRIPTION;
+  const appHost = env.APP_HOST || DEFAULT_APP_HOST;
+  const shortDomain = env.SHORT_DOMAIN || '';
+  const appProtocol = env.APP_PROTOCOL || '';
+  const themeColor = env.THEME_COLOR || DEFAULT_THEME_COLOR;
+  const tileColor = env.TILE_COLOR || DEFAULT_TILE_COLOR;
+  // The `_websync_` ping tells Telegram's own edge that a web session is live and
+  // lets it redirect between Web A and Web K. A branded host is not that edge, so
+  // the ping is off unless the fork serves the endpoint itself.
+  const isWebsyncEnabled = env.WEBSYNC_ENABLED !== '0' && !shortDomain;
+
+  const csp = buildCsp(appEnv, isWebsyncEnabled);
   const isDevelopmentMode = mode === 'development';
   const telegramApiId = env.TELEGRAM_API_ID || '';
   const telegramApiHash = env.TELEGRAM_API_HASH || '';
@@ -174,8 +194,15 @@ export default defineConfig(({ mode }): UserConfig => {
   setViteEnv({
     TG_APP_ENV: appEnv,
     TG_APP_MOCKED_CLIENT: appMockedClient,
-    TG_APP_NAME: env.APP_NAME || '',
+    TG_APP_NAME: appName,
     TG_APP_TITLE: appTitle,
+    TG_APP_DESCRIPTION: appDescription,
+    TG_APP_HOST: appHost,
+    TG_SHORT_DOMAIN: shortDomain,
+    TG_APP_PROTOCOL: appProtocol,
+    TG_THEME_COLOR: themeColor,
+    TG_TILE_COLOR: tileColor,
+    TG_WEBSYNC_ENABLED: isWebsyncEnabled ? '1' : '0',
     TG_PUBLIC_URL: baseUrl,
     TG_CSP: csp,
     TG_APPLE_ICON: appleIcon,
@@ -215,6 +242,8 @@ export default defineConfig(({ mode }): UserConfig => {
       host: '0.0.0.0',
       port: 1234,
       strictPort: true,
+      // The branded host, so a fork can open the dev server under its own name
+      allowedHosts: [appHost],
       headers: {
         'Content-Security-Policy': csp,
         'Service-Worker-Allowed': '/',
@@ -296,12 +325,12 @@ function setViteEnv(env: Record<string, string>) {
   });
 }
 
-function buildCsp(appEnv: string) {
+function buildCsp(appEnv: string, isWebsyncEnabled: boolean) {
   return `
   default-src 'self';
   connect-src 'self' wss://*.web.telegram.org blob: http: https: wss: ${appEnv === 'development' ? 'ipc:' : ''};
-  script-src 'self' 'wasm-unsafe-eval'
-    https://t.me/_websync_ https://telegram.me/_websync_ https://telegram.dog/_websync_;
+  script-src 'self' 'wasm-unsafe-eval'${isWebsyncEnabled ? `
+    https://t.me/_websync_ https://telegram.me/_websync_ https://telegram.dog/_websync_` : ''};
   worker-src 'self'${appEnv === 'development' ? ' blob:' : ''};
   style-src 'self' 'unsafe-inline';
   font-src 'self' data:;

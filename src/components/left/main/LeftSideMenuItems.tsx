@@ -13,6 +13,7 @@ import {
   BETA_CHANGELOG_URL,
   FEEDBACK_URL,
   IS_BETA,
+  IS_BRANDED,
   IS_TEST,
   PRODUCTION_HOSTNAME,
   WEB_VERSION_BASE,
@@ -104,7 +105,7 @@ const LeftSideMenuItems = ({
   const animationLevelValue = animationLevel !== ANIMATION_LEVEL_MIN
     ? (animationLevel === ANIMATION_LEVEL_MAX ? 'max' : 'mid') : 'min';
 
-  const withOtherVersions = !IS_TAURI && (window.location.hostname === PRODUCTION_HOSTNAME || IS_TEST);
+  const withOtherVersions = !IS_TAURI && !IS_BRANDED && (window.location.hostname === PRODUCTION_HOSTNAME || IS_TEST);
 
   const archivedUnreadChatsCount = useFolderManagerForUnreadCounters()[ARCHIVED_FOLDER_ID]?.chatsCount || 0;
 

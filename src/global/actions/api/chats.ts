@@ -28,6 +28,7 @@ import {
   RE_TG_LINK,
   SAVED_FOLDER_ID,
   SERVICE_NOTIFICATIONS_USER_ID,
+  SHORT_DOMAIN,
   TME_WEB_DOMAINS,
   TMP_CHAT_ID,
   TOP_CHAT_MESSAGES_PRELOAD_LIMIT,
@@ -1747,7 +1748,7 @@ addActionHandler('openTelegramLink', async (global, actions, payload): Promise<v
     return;
   }
 
-  const hostname = TME_WEB_DOMAINS.has(uri.hostname) ? 't.me' : uri.hostname;
+  const hostname = TME_WEB_DOMAINS.has(uri.hostname) ? (SHORT_DOMAIN || 't.me') : uri.hostname;
   const hostParts = hostname.split('.');
   if (hostParts.length > 3) return;
 

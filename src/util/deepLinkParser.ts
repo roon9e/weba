@@ -1,6 +1,6 @@
 import type { ThreadId } from '../types';
 
-import { RE_TG_LINK, RE_TME_LINK, WALLET_SEND_LINK_DOMAIN } from '../config';
+import { RE_TG_LINK, RE_TME_LINK, SHORT_DOMAIN, WALLET_SEND_LINK_DOMAIN } from '../config';
 import { MAX_COINS } from '../lib/ton/cell';
 import { IS_BAD_URL_PARSER } from './browser/globalEnvironment';
 import { ensureProtocol } from './browser/url';
@@ -190,7 +190,7 @@ type OAuthLinkBuilderParams = Omit<BuilderParams<OAuthLink>, 'url'> & {
   url: string;
 };
 
-const ELIGIBLE_HOSTNAMES = new Set(['t.me', 'telegram.me', 'telegram.dog']);
+const ELIGIBLE_HOSTNAMES = new Set(['t.me', 'telegram.me', 'telegram.dog', ...(SHORT_DOMAIN ? [SHORT_DOMAIN] : [])]);
 const MAX_BOT_START_PARAMETER_LENGTH = 64;
 // Up to nine decimals: a finer amount would round into one the link does not name
 const RE_GRAMS_AMOUNT = /^\d+(\.\d{1,9})?$/;

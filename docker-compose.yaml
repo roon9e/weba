@@ -1,0 +1,16 @@
+# Builds the image locally and serves it. To deploy a published image instead,
+# comment the `build:` block and uncomment the `image:` line.
+services:
+  web:
+    build:
+      context: .
+      dockerfile: .docker/Dockerfile_production
+    # image: ghcr.io/roon9e/weba:latest
+    restart: unless-stopped
+    ports:
+      - "8090:80"
+
+# The branding and the API credentials are baked in at build time — Vite inlines
+# `import.meta.env.*`, so nothing here can change them at runtime. Rebuild the
+# image after editing `.env` (`docker compose up -d --build`); restarting or
+# pulling only reuses whatever a previous build baked in.

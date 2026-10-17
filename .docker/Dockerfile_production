@@ -1,0 +1,49 @@
+# syntax=docker/dockerfile:1
+
+# ─── builder ──────────────────────────────────────────────────────────────────
+FROM node:24 AS builder
+
+WORKDIR /app
+
+# The manifests first, so a source edit reuses the cached install layer instead of
+# re-resolving the tree. `--ignore-scripts` skips the husky prepare hook, which
+# wants a git repository that a build context need not carry.
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts
+
+COPY . .
+
+# The deployment config, for the builder only. `loadEnv` reads every branding and
+# API value from it. The runtime stage copies dist/ and not the context, so this
+# file never leaves the builder.
+COPY .env ./.env
+
+# Build the bundle.
+#
+# `npm run test:playwright` and the lang-pack fetch are deliberately absent: a
+# browser suite and a call to translations.telegram.org do not belong in an image
+# build, and the repo already ships a lang pack.
+#
+# The bundle is always produced here, never inherited from the context: a skipped
+# or failed step must fail the image build rather than quietly ship whatever
+# happened to be committed under dist/.
+RUN npx vite build --mode production
+
+
+# ─── runtime ─────────────────────────────────────────────────────────────────
+FROM nginx:stable-alpine3.20-slim AS runtime
+
+RUN apk update && apk upgrade --no-cache
+
+# `vite build` copies public/ into dist/, so the bundle is the whole site. The
+# MTProto transports are NOT proxied here: this client opens them straight to
+# Telegram's DCs (zws1..5.web.telegram.org), not to its own origin.
+COPY --from=builder /app/dist/       /usr/share/nginx/html/
+COPY .docker/nginx.conf              /etc/nginx/conf.d/default.conf
+
+# nginx's master process still runs as root so it can bind :80; the workers are
+# what serve requests.
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget -qO- http://127.0.0.1/ >/dev/null || exit 1

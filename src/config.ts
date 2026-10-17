@@ -10,9 +10,23 @@ export const APP_CODE_NAME = 'A';
 export const APP_ENV = import.meta.env.TG_APP_ENV;
 export const APP_NAME = import.meta.env.TG_APP_NAME || `Telegram Web ${APP_CODE_NAME}`;
 
-export const PRODUCTION_HOSTNAME = 'web.telegram.org';
-export const PRODUCTION_URL = 'https://web.telegram.org/a';
-export const WEB_VERSION_BASE = 'https://web.telegram.org/'; // Used to redirect to other versions
+// Branding. A fork fills these in through .env (see vite.config.ts); an
+// unmodified checkout gets Telegram's own values and behaves as it always has.
+export const APP_HOST = import.meta.env.TG_APP_HOST || 'web.telegram.org';
+export const SHORT_DOMAIN = import.meta.env.TG_SHORT_DOMAIN || '';
+export const APP_PROTOCOL = import.meta.env.TG_APP_PROTOCOL || '';
+export const WEBSYNC_ENABLED = import.meta.env.TG_WEBSYNC_ENABLED !== '0';
+
+// Whether this build serves its own host rather than Telegram's. Gates the
+// cross-version redirects and links, which would point a branded deploy at
+// Web K/Z on Telegram's domain.
+export const IS_BRANDED = Boolean(SHORT_DOMAIN || APP_PROTOCOL || APP_HOST !== 'web.telegram.org');
+
+// The host this build counts as its own production host. `IS_PRODUCTION_HOST`
+// and the permanent-version redirect both key off it.
+export const PRODUCTION_HOSTNAME = APP_HOST;
+export const PRODUCTION_URL = `https://${APP_HOST}/a`;
+export const WEB_VERSION_BASE = `https://${APP_HOST}/`; // Used to redirect to other versions
 export const BASE_URL = import.meta.env.TG_PUBLIC_URL;
 export const ACCOUNT_QUERY = 'account';
 
@@ -343,10 +357,20 @@ export const SUPPORTED_TRANSLATION_LANGUAGES = [
 // eslint-disable-next-line @stylistic/max-len
 export const RE_LINK_TEMPLATE = '((ftp|https?):\\/\\/)?((www\\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\\.[a-zA-Z][-a-zA-Z0-9]{1,62})\\b([-a-zA-Z0-9()@:%_+.,~#?&/=]*)';
 export const RE_MENTION_TEMPLATE = '(@[\\w\\d_-]+)';
-export const RE_TG_LINK = /^tg:(\/\/)?/i;
-export const RE_TME_LINK = /^(https?:\/\/)?(?:([-a-zA-Z0-9@:%_+~#=]{1,32}\.)?t\.me|telegram\.(?:me|dog))(?=[:/?#]|$)/i;
+// The short domain every link the app builds or opens starts with, and the
+// protocol a `resolve` deep link uses. Both keep Telegram's own values until a
+// fork sets SHORT_DOMAIN / APP_PROTOCOL in .env.
+const LINK_HOST = SHORT_DOMAIN || 't.me';
+const LINK_PROTOCOL = APP_PROTOCOL || 'tg';
+
+// Escaped for the host patterns below; a domain is literal text in a regex.
+const RE_LINK_HOST = LINK_HOST.replace(/\./g, '\\.');
+
+export const RE_TG_LINK = new RegExp(`^${LINK_PROTOCOL}:(\\/\\/)?`, 'i');
+// eslint-disable-next-line @stylistic/max-len
+export const RE_TME_LINK = new RegExp(`^(https?:\\/\\/)?(?:([-a-zA-Z0-9@:%_+~#=]{1,32}\\.)?${RE_LINK_HOST}|telegram\\.(?:me|dog))(?=[:/?#]|$)`, 'i');
 export const RE_TELEGRAM_LINK = /^(https?:\/\/)?telegram\.org\//i;
-export const TME_LINK_PREFIX = 'https://t.me/';
+export const TME_LINK_PREFIX = `https://${LINK_HOST}/`;
 export const BOT_FATHER_USERNAME = 'botfather';
 // Gram Wallet
 export const WALLET_BOT_USERNAME = 'walt';
@@ -374,6 +398,7 @@ export const PURCHASE_USERNAME = 'auction';
 export const ACCEPTABLE_USERNAME_ERRORS = new Set([USERNAME_PURCHASE_ERROR, 'USERNAME_INVALID']);
 export const TME_WEB_DOMAINS = new Set([
   't.me', 'telegram.me', 'telegram.dog', 'web.t.me', 'a.t.me', 'k.t.me', 'z.t.me',
+  ...(SHORT_DOMAIN ? [SHORT_DOMAIN] : []),
 ]);
 export const WEB_APP_PLATFORM = 'weba';
 export const LANG_PACK = 'weba';
