@@ -1,0 +1,26 @@
+# webA, served from a prebuilt bundle.
+#
+# The bundle is built locally and copied to ./dist, not built here: this host has
+# under 4 GB free and a `node` toolchain plus `node_modules` would eat most of it.
+# Rebuilding is `npm run build:production` locally, then re-copy ./dist and
+# `docker compose up -d`.
+#
+# Nginx Proxy Manager, which fronts this box, terminates TLS and does the
+# hostname routing. Point a Proxy Host at this box's port 8091.
+services:
+  weba:
+    container_name: weba
+    image: nginx:stable-alpine3.20-slim
+    restart: unless-stopped
+    ports:
+      # 8090 is taken by tweb.production
+      - "8091:80"
+    volumes:
+      - ./dist:/usr/share/nginx/html:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s

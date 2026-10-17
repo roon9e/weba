@@ -41,6 +41,11 @@ RUN apk update && apk upgrade --no-cache
 COPY --from=builder /app/dist/       /usr/share/nginx/html/
 COPY .docker/nginx.conf              /etc/nginx/conf.d/default.conf
 
+# Two profiling reports that `public/` carries into dist/ and nothing loads:
+# a bundle-stats dump (~93 MB) and a statoscope trace. Removing them here keeps
+# the runtime image and any prebuilt-dist deploy in agreement.
+RUN rm -f /usr/share/nginx/html/build-stats.json /usr/share/nginx/html/statoscope-report.html
+
 # nginx's master process still runs as root so it can bind :80; the workers are
 # what serve requests.
 EXPOSE 80
